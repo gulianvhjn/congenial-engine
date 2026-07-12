@@ -1,0 +1,2104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>传讯小六</title>
+    <style>
+        /* ========== 原有聊天样式 ========== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        }
+        :root {
+            --bg: #ededed;
+            --chat-bg: #ededed;
+            --top-bar-bg: #ffffff;
+            --bottom-bar-bg: #f7f7f7;
+            --primary: #07c160;
+            --primary-dark: #06ad56;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666;
+            --text-light: #999;
+            --border: #d9d9d9;
+            --shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            --radius: 12px;
+            --msg-other-bg: #ffffff;
+            --msg-self-bg: #95ec69;
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --top-height: 72px;
+            --bottom-height: 64px;
+        }
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: var(--bg);
+        }
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+            max-width: 480px;
+            margin: 0 auto;
+            background: var(--chat-bg);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+        /* 顶部栏 */
+        #topBar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: var(--top-bar-bg);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            height: var(--top-height);
+            min-height: var(--top-height);
+            position: relative;
+            z-index: 10;
+            gap: 4px;
+            flex-wrap: nowrap;
+        }
+        .top-left {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+            min-width: 0;
+        }
+        .top-avatar-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .top-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid var(--border);
+            background: #ddd;
+            display: block;
+        }
+        .top-status {
+            font-size: 9px;
+            color: var(--text-light);
+            line-height: 1.2;
+            max-width: 44px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            text-align: center;
+        }
+        .top-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 70px;
+            flex-shrink: 1;
+        }
+        .top-center {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+            justify-content: center;
+        }
+        .top-center .icon-btn {
+            font-size: 18px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 6px;
+            transition: background 0.2s;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+        }
+        .top-center .icon-btn:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+        .daily-status-badge {
+            font-size: 11px;
+            background: #f0f0f0;
+            padding: 2px 10px;
+            border-radius: 12px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            white-space: nowrap;
+            max-width: 90px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            border: none;
+            transition: background 0.2s;
+            height: 26px;
+            display: flex;
+            align-items: center;
+        }
+        .daily-status-badge:hover {
+            background: #e5e5e5;
+        }
+        .top-right {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+            min-width: 0;
+        }
+        .top-right .top-avatar-wrap {
+            flex-direction: column;
+        }
+        .top-right .top-name {
+            max-width: 60px;
+            text-align: right;
+        }
+        /* 聊天区域 */
+        #chatArea {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 14px 8px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            background: var(--chat-bg);
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 12px;
+        }
+        #chatArea::-webkit-scrollbar {
+            width: 3px;
+        }
+        #chatArea::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 3px;
+        }
+        .msg {
+            display: flex;
+            flex-direction: column;
+            max-width: 80%;
+            animation: fadeIn 0.25s ease;
+            position: relative;
+        }
+        .msg.self {
+            align-self: flex-end;
+            align-items: flex-end;
+        }
+        .msg.other {
+            align-self: flex-start;
+            align-items: flex-start;
+        }
+        .msg-bubble {
+            padding: 10px 14px;
+            border-radius: var(--radius);
+            word-break: break-word;
+            line-height: 1.6;
+            font-size: 15px;
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+            transition: background 0.15s;
+        }
+        .msg.self .msg-bubble {
+            background: var(--msg-self-bg);
+            border-bottom-right-radius: 4px;
+        }
+        .msg.other .msg-bubble {
+            background: var(--msg-other-bg);
+            border-bottom-left-radius: 4px;
+        }
+        .msg-time {
+            font-size: 10px;
+            color: var(--text-light);
+            margin: 2px 6px 0 6px;
+        }
+        .msg.self .msg-time {
+            text-align: right;
+        }
+        .msg.other .msg-time {
+            text-align: left;
+        }
+        .msg-quote {
+            font-size: 13px;
+            color: var(--text-secondary);
+            background: rgba(0, 0, 0, 0.05);
+            padding: 6px 10px;
+            border-radius: 6px;
+            margin-bottom: 4px;
+            border-left: 3px solid var(--primary);
+            max-width: 100%;
+            word-break: break-word;
+        }
+        .msg.self .msg-quote {
+            border-left-color: #5a8c4a;
+        }
+        .msg-actions {
+            display: none;
+            gap: 4px;
+            margin-top: 2px;
+            flex-wrap: wrap;
+        }
+        .msg:hover .msg-actions,
+        .msg-actions.show {
+            display: flex;
+        }
+        .msg-actions button {
+            background: transparent;
+            border: none;
+            font-size: 12px;
+            color: var(--text-secondary);
+            padding: 2px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+            background: rgba(0, 0, 0, 0.04);
+        }
+        .msg-actions button:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+        .msg-actions button.danger:hover {
+            color: #e74c3c;
+            background: rgba(231, 76, 60, 0.1);
+        }
+        .msg-actions button.starred {
+            color: #f39c12;
+        }
+        /* 底部栏 */
+        #bottomBar {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 10px;
+            background: var(--bottom-bar-bg);
+            border-top: 1px solid var(--border);
+            flex-shrink: 0;
+            height: var(--bottom-height);
+            min-height: var(--bottom-height);
+            padding-bottom: calc(6px + var(--safe-bottom));
+        }
+        #bottomBar .icon-btn {
+            font-size: 22px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 6px;
+            transition: background 0.2s;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            flex-shrink: 0;
+        }
+        #bottomBar .icon-btn:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+        #bottomBar .icon-btn:active {
+            background: rgba(0, 0, 0, 0.1);
+        }
+        #msgInput {
+            flex: 1;
+            min-width: 0;
+            padding: 8px 14px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            outline: none;
+            font-size: 15px;
+            background: #fff;
+            transition: border 0.2s;
+            height: 38px;
+        }
+        #msgInput:focus {
+            border-color: var(--primary);
+        }
+        #sendBtn {
+            padding: 6px 18px;
+            border-radius: 20px;
+            border: none;
+            background: var(--primary);
+            color: #fff;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            height: 38px;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+        #sendBtn:hover {
+            background: var(--primary-dark);
+        }
+        #sendBtn:active {
+            transform: scale(0.95);
+        }
+        #sendBtn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        /* 弹窗通用 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            backdrop-filter: blur(2px);
+            padding: 20px;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal {
+            background: #fff;
+            border-radius: 16px;
+            max-width: 380px;
+            width: 100%;
+            padding: 24px 22px 28px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: modalIn 0.25s ease;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        @keyframes modalIn {
+            from {
+                opacity: 0;
+                transform: scale(0.92) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .modal h3 {
+            font-size: 18px;
+            margin-bottom: 16px;
+            text-align: center;
+            color: var(--text-primary);
+        }
+        .modal .field {
+            margin-bottom: 16px;
+        }
+        .modal .field label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+        .modal .field input[type="text"],
+        .modal .field input[type="file"],
+        .modal .field textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: border 0.2s;
+            font-family: inherit;
+        }
+        .modal .field input:focus,
+        .modal .field textarea:focus {
+            border-color: var(--primary);
+        }
+        .modal .field textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        .modal .avatar-preview {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--border);
+            display: block;
+            margin: 0 auto 8px;
+            background: #ddd;
+        }
+        .modal .btn-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+            justify-content: flex-end;
+        }
+        .modal .btn-row button {
+            padding: 8px 20px;
+            border-radius: 8px;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .modal .btn-row .btn-cancel {
+            background: #f0f0f0;
+            color: var(--text-secondary);
+        }
+        .modal .btn-row .btn-cancel:hover {
+            background: #e0e0e0;
+        }
+        .modal .btn-row .btn-confirm {
+            background: var(--primary);
+            color: #fff;
+        }
+        .modal .btn-row .btn-confirm:hover {
+            background: var(--primary-dark);
+        }
+        /* 塔罗牌展示 */
+        .tarot-card-display {
+            text-align: center;
+            padding: 8px 0;
+        }
+        .tarot-card-display .card-name {
+            font-size: 20px;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        .tarot-card-display .card-suit {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        .tarot-card-display .card-meaning {
+            font-size: 14px;
+            color: var(--text-primary);
+            margin-top: 6px;
+            line-height: 1.6;
+            background: #f8f8f8;
+            padding: 10px 14px;
+            border-radius: 10px;
+            text-align: left;
+        }
+        .tarot-card-display .card-orientation {
+            display: inline-block;
+            padding: 2px 14px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+        .tarot-card-display .card-orientation.upright {
+            background: #d4edda;
+            color: #155724;
+        }
+        .tarot-card-display .card-orientation.reversed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        /* 响应式 */
+        @media (max-width: 400px) {
+            :root {
+                --top-height: 62px;
+                --bottom-height: 56px;
+            }
+            .top-avatar {
+                width: 32px;
+                height: 32px;
+            }
+            .top-name {
+                font-size: 13px;
+                max-width: 50px;
+            }
+            .top-status {
+                font-size: 8px;
+                max-width: 36px;
+            }
+            .top-center .icon-btn {
+                font-size: 15px;
+                width: 26px;
+                height: 26px;
+            }
+            .daily-status-badge {
+                font-size: 10px;
+                padding: 1px 8px;
+                max-width: 60px;
+                height: 22px;
+            }
+            #bottomBar .icon-btn {
+                font-size: 18px;
+                width: 30px;
+                height: 30px;
+            }
+            #msgInput {
+                font-size: 14px;
+                height: 34px;
+                padding: 6px 12px;
+            }
+            #sendBtn {
+                font-size: 13px;
+                height: 34px;
+                padding: 4px 14px;
+            }
+            .msg-bubble {
+                font-size: 14px;
+                padding: 8px 12px;
+            }
+            .modal {
+                padding: 18px 16px 22px;
+            }
+        }
+        @media (max-width: 360px) {
+            .top-name {
+                max-width: 40px;
+                font-size: 12px;
+            }
+            .top-center {
+                gap: 2px;
+            }
+            .daily-status-badge {
+                max-width: 50px;
+                font-size: 9px;
+                padding: 1px 6px;
+            }
+            .top-avatar {
+                width: 28px;
+                height: 28px;
+            }
+        }
+        @media (min-width: 600px) {
+            #app {
+                border-radius: 16px;
+                margin-top: 20px;
+                margin-bottom: 20px;
+                height: calc(100% - 40px);
+                max-height: 800px;
+            }
+            body {
+                background: #d0d0d0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+        }
+        #chatArea {
+            scrollbar-width: thin;
+        }
+        .hidden {
+            display: none !important;
+        }
+        .text-ellipsis {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .tarot-badge {
+            display: inline-block;
+            font-size: 11px;
+            background: #f0e6d3;
+            padding: 1px 10px;
+            border-radius: 10px;
+            color: #7a5a3a;
+            margin-top: 4px;
+            cursor: pointer;
+        }
+
+        /* ========== 新增设置面板样式 (嵌入) ========== */
+        #settingsPanel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #f5f5f5;
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            max-width: 480px;
+            margin: 0 auto;
+            right: 0;
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+        #settingsPanel.active {
+            display: flex;
+        }
+        .settings-header {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+            flex-shrink: 0;
+        }
+        .settings-header .back-btn {
+            font-size: 24px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 4px 12px 4px 4px;
+        }
+        .settings-header h2 {
+            flex: 1;
+            font-size: 18px;
+            margin: 0;
+        }
+        .settings-tabs {
+            display: flex;
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+            flex-shrink: 0;
+            overflow-x: auto;
+        }
+        .settings-tabs button {
+            flex: 1;
+            padding: 10px 4px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            font-size: 14px;
+            color: #666;
+            cursor: pointer;
+            transition: 0.2s;
+            white-space: nowrap;
+        }
+        .settings-tabs button.active {
+            color: #000;
+            border-bottom-color: var(--primary);
+            font-weight: 600;
+        }
+        .settings-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            background: #fafafa;
+        }
+        .settings-subpanel {
+            display: none;
+        }
+        .settings-subpanel.active {
+            display: block;
+        }
+        .card-list-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 10px;
+            background: #fff;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            border: 1px solid #eee;
+            gap: 8px;
+        }
+        .card-list-item .content {
+            flex: 1;
+            word-break: break-word;
+            font-size: 14px;
+        }
+        .card-list-item .group-tag {
+            font-size: 11px;
+            color: #888;
+            background: #f0f0f0;
+            padding: 2px 8px;
+            border-radius: 10px;
+            white-space: nowrap;
+        }
+        .card-list-item .del-btn {
+            background: none;
+            border: none;
+            color: #e74c3c;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 0 4px;
+        }
+        .card-list-item .checkbox {
+            margin-right: 6px;
+        }
+        .batch-actions {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .batch-actions button {
+            padding: 4px 12px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            background: #fff;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .batch-actions button.danger {
+            border-color: #e74c3c;
+            color: #e74c3c;
+        }
+        .batch-actions button.primary {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        .theme-retro .msg.other .msg-bubble,
+        .theme-retro .msg.self .msg-bubble {
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            overflow: visible !important;
+            font-size: 12px !important;
+            line-height: 1.5 !important;
+            font-family: "宋体", "SimSun", "Fixedsys", monospace !important;
+            position: relative !important;
+            margin: 8px 0 !important;
+            width: 100% !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            border: 2px solid #d4d0c8 !important;
+            padding: 6px 10px !important;
+        }
+        .theme-retro .msg.other .msg-bubble {
+            border-top-color: #ffffff !important;
+            border-left-color: #ffffff !important;
+            border-right-color: #808080 !important;
+            border-bottom-color: #808080 !important;
+            margin-left: 4px !important;
+            margin-right: 20% !important;
+        }
+        .theme-retro .msg.self .msg-bubble {
+            border-top-color: #ffffff !important;
+            border-left-color: #ffffff !important;
+            border-right-color: #808080 !important;
+            border-bottom-color: #808080 !important;
+            margin-right: 4px !important;
+            margin-left: 20% !important;
+        }
+        .theme-retro .msg-time {
+            display: block !important;
+            font-size: 10px !important;
+            color: #0000ff !important;
+            margin-top: 2px !important;
+            font-family: "宋体", "SimSun", monospace !important;
+            text-decoration: underline !important;
+        }
+        .theme-retro .msg .nickname {
+            font-size: 11px !important;
+            color: #ff0000 !important;
+            margin-bottom: 2px !important;
+            display: block !important;
+            font-weight: normal !important;
+        }
+        .theme-retro .msg .emoji {
+            font-family: "宋体", "SimSun", monospace !important;
+            font-size: 14px !important;
+        }
+        .theme-retro .msg.system {
+            background: #ffffe0 !important;
+            border: 1px solid #d4d0c8 !important;
+            text-align: center !important;
+            color: #000000 !important;
+            font-size: 11px !important;
+            padding: 2px !important;
+            margin: 4px 0 !important;
+            font-family: "宋体", "SimSun", monospace !important;
+        }
+        .theme-night #app {
+            background: #1a1a1a;
+        }
+        .theme-night #topBar {
+            background: #2d2d2d;
+            border-color: #444;
+        }
+        .theme-night #bottomBar {
+            background: #2d2d2d;
+            border-color: #444;
+        }
+        .theme-night .top-name,
+        .theme-night .top-status {
+            color: #ccc;
+        }
+        .theme-night #chatArea {
+            background: #1a1a1a;
+        }
+        .theme-night .msg.other .msg-bubble {
+            background: #2d2d2d;
+            color: #eee;
+        }
+        .theme-night .msg.self .msg-bubble {
+            background: #3a5a3a;
+            color: #eee;
+        }
+        .theme-night .msg-time {
+            color: #888;
+        }
+        .theme-night #msgInput {
+            background: #333;
+            color: #eee;
+            border-color: #555;
+        }
+        .theme-night #msgInput::placeholder {
+            color: #888;
+        }
+        .theme-night .daily-status-badge {
+            background: #333;
+            color: #aaa;
+        }
+        /* 信件 */
+        .letter-item {
+            background: #fff;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-left: 4px solid #07c160;
+        }
+        .letter-item .letter-meta {
+            font-size: 12px;
+            color: #888;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        .letter-item .letter-content {
+            margin: 6px 0;
+        }
+        .letter-item .letter-result {
+            background: #f5f5f5;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+        .letter-item .status-badge {
+            font-size: 12px;
+            padding: 2px 10px;
+            border-radius: 12px;
+            background: #f0f0f0;
+        }
+        .letter-item .status-badge.done {
+            background: #d4edda;
+            color: #155724;
+        }
+        .letter-item .status-badge.waiting {
+            background: #fff3cd;
+            color: #856404;
+        }
+        /* 小六卦起 */
+        .liuyao-input-area {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .liuyao-input-area input,
+        .liuyao-input-area textarea {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+            width: 100%;
+        }
+        .liuyao-input-area textarea {
+            min-height: 60px;
+        }
+        .liuyao-result {
+            background: #fff;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 10px;
+            border: 1px solid #eee;
+            white-space: pre-wrap;
+        }
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            background: #fff;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            cursor: pointer;
+            border: 1px solid #f0f0f0;
+        }
+        .history-item .del-hist {
+            background: none;
+            border: none;
+            color: #e74c3c;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: #fff;
+            padding: 10px 24px;
+            border-radius: 30px;
+            font-size: 14px;
+            z-index: 9999;
+            display: none;
+        }
+        .toast.show {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+        hr { margin: 16px 0; border: none; border-top: 1px solid #eee; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; }
+        .text-muted { color: #888; font-size: 13px; }
+        .text-center { text-align: center; }
+    </style>
+</head>
+<body>
+
+    <!-- ===== 主界面 ===== -->
+    <div id="app">
+        <!-- 顶部栏 -->
+        <header id="topBar">
+            <div class="top-left">
+                <div class="top-avatar-wrap" data-target="other" data-type="avatar">
+                    <img id="otherAvatar" class="top-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%2399c2e0'/%3E%3Ctext x='50' y='55' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif'%3E🧙%3C/text%3E%3C/svg%3E" alt="对方头像">
+                    <span id="otherStatus" class="top-status">✨ 静候</span>
+                </div>
+                <span id="otherName" class="top-name" data-target="other" data-type="name">塔罗灵犀</span>
+            </div>
+            <div class="top-center">
+                <button class="icon-btn" id="settingsBtn" title="设置">⚙️</button>
+                <button class="daily-status-badge" id="dailyStatusBtn">📜 每日状态</button>
+                <button class="icon-btn" id="calendarBtn" title="日历">📅</button>
+            </div>
+            <div class="top-right">
+                <span id="myName" class="top-name" data-target="me" data-type="name">寻光者</span>
+                <div class="top-avatar-wrap" data-target="me" data-type="avatar">
+                    <img id="myAvatar" class="top-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%23f5b7b1'/%3E%3Ctext x='50' y='55' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif'%3E🌟%3C/text%3E%3C/svg%3E" alt="我方头像">
+                    <span id="myStatus" class="top-status">🌱 探索</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- 聊天区域 -->
+        <div id="chatArea"></div>
+
+        <!-- 底部栏 -->
+        <footer id="bottomBar">
+            <button class="icon-btn" id="phoneBtn">📞</button>
+            <button class="icon-btn" id="albumBtn">🖼️</button>
+            <button class="icon-btn" id="emojiBtn">😊</button>
+            <input type="text" id="msgInput" placeholder="输入讯息..." autocomplete="off">
+            <button id="sendBtn">发送</button>
+        </footer>
+    </div>
+
+    <!-- ===== 设置面板 (嵌入) ===== -->
+    <div id="settingsPanel">
+        <div class="settings-header">
+            <button class="back-btn" id="settingsBack">←</button>
+            <h2>设置</h2>
+        </div>
+        <div class="settings-tabs" id="settingsTabs">
+            <button class="active" data-tab="tabCustom">自定义回复</button>
+            <button data-tab="tabTheme">主题风格</button>
+            <button data-tab="tabLetter">信件往来</button>
+            <button data-tab="tabLiuyao">小六卦起</button>
+        </div>
+        <div class="settings-content">
+            <!-- 自定义回复 -->
+            <div id="tabCustom" class="settings-subpanel active">
+                <div class="batch-actions">
+                    <button class="primary" id="addCardBtn">➕ 添加</button>
+                    <button class="danger" id="batchDeleteBtn">🗑️ 批量删除</button>
+                    <button class="primary" id="groupManageBtn">📁 分组</button>
+                </div>
+                <div id="cardListContainer"></div>
+            </div>
+            <!-- 主题风格 -->
+            <div id="tabTheme" class="settings-subpanel">
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                    <button class="btn-primary" id="themeBgBtn">🖼️ 主题背景</button>
+                    <button class="btn-primary" id="themeBubbleBtn">💬 主题字泡 (复古)</button>
+                    <button class="btn-primary" id="themeNightBtn">🌙 夜间模式</button>
+                    <button class="btn-primary" id="themeHappyBtn">😄 天天开心 (重置默认)</button>
+                    <div class="text-muted text-center" style="margin-top:8px;">点击切换，再次点击取消。刷新聊天生效。</div>
+                </div>
+                <div style="margin-top:16px;background:#f5f5f5;padding:12px;border-radius:8px;border:1px solid #ddd;">
+                    <div style="font-weight:600;margin-bottom:6px;">当前主题预览</div>
+                    <div id="themePreviewContainer">
+                        <div class="preview-msg" style="background:#fff;padding:6px 12px;border-radius:6px;margin:4px 0;display:inline-block;">对方消息</div>
+                        <div class="preview-msg" style="background:#95ec69;padding:6px 12px;border-radius:6px;margin:4px 0;display:inline-block;float:right;">我方消息</div>
+                    </div>
+                </div>
+            </div>
+            <!-- 信件往来 -->
+            <div id="tabLetter" class="settings-subpanel">
+                <div style="display:flex;gap:10px;margin-bottom:16px;">
+                    <button class="btn-primary" id="letterInboxBtn">📩 来信</button>
+                    <button class="btn-primary" id="letterComposeBtn">✉️ 回写信</button>
+                </div>
+                <div id="letterContainer"></div>
+            </div>
+            <!-- 小六卦起 -->
+            <div id="tabLiuyao" class="settings-subpanel">
+                <div class="liuyao-input-area">
+                    <textarea id="liuyaoQuestion" placeholder="输入您的问题..."></textarea>
+                    <input type="text" id="liuyaoInput" placeholder="输入数字或单个汉字">
+                    <button class="btn-primary" id="liuyaoGetBtn">🔮 获取结果</button>
+                </div>
+                <div id="liuyaoResultDisplay" class="liuyao-result" style="display:none;"></div>
+                <hr>
+                <div class="flex-between">
+                    <span style="font-weight:600;">📜 历史结果</span>
+                    <button class="btn-danger" id="clearLiuyaoHist" style="padding:4px 12px;font-size:12px;">清空</button>
+                </div>
+                <div id="liuyaoHistory" style="margin-top:8px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 通用模态框 (用于添加字卡、分组等) ===== -->
+    <div class="modal-overlay" id="commonModal">
+        <div class="modal">
+            <h3 id="commonModalTitle">标题</h3>
+            <div id="commonModalBody"></div>
+            <div class="btn-row" id="commonModalFooter">
+                <button class="btn-cancel" id="commonModalCancel">取消</button>
+                <button class="btn-confirm" id="commonModalConfirm">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 塔罗详情弹窗 ===== -->
+    <div class="modal-overlay" id="tarotModal">
+        <div class="modal">
+            <h3>🔮 塔罗 · 灵讯</h3>
+            <div id="tarotContent" class="tarot-card-display"></div>
+            <div class="btn-row" style="justify-content:center;margin-top:14px;">
+                <button class="btn-cancel" id="tarotModalClose">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 修改资料弹窗 ===== -->
+    <div class="modal-overlay" id="profileModal">
+        <div class="modal">
+            <h3 id="modalTitle">修改资料</h3>
+            <div class="field" style="text-align:center;">
+                <img id="modalAvatarPreview" class="avatar-preview" src="" alt="头像预览">
+                <input type="file" id="avatarFileInput" accept="image/*" style="margin-top:6px;">
+            </div>
+            <div class="field">
+                <label>昵称</label>
+                <input type="text" id="modalNameInput" placeholder="输入昵称">
+            </div>
+            <div class="btn-row">
+                <button class="btn-cancel" id="modalCancel">取消</button>
+                <button class="btn-confirm" id="modalConfirm">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Toast ===== -->
+    <div id="toast" class="toast"></div>
+
+    <script>
+        // ================================================================
+        //  数据存储 (localStorage)
+        // ================================================================
+        const CARD_STORAGE_KEY = 'tarot_custom_cards';
+        const GROUP_STORAGE_KEY = 'tarot_groups';
+        const LETTER_STORAGE_KEY = 'tarot_letters';
+        const LIUYAO_HIST_KEY = 'tarot_liuyao_hist';
+        const THEME_STORAGE_KEY = 'tarot_theme';
+
+        function loadData(key, defaultVal) {
+            try { const d = localStorage.getItem(key); return d ? JSON.parse(d) : defaultVal; } catch(e) { return defaultVal; }
+        }
+        function saveData(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+
+        let customCards = loadData(CARD_STORAGE_KEY, []);
+        let groups = loadData(GROUP_STORAGE_KEY, []);
+        let letters = loadData(LETTER_STORAGE_KEY, []);
+        let liuyaoHistory = loadData(LIUYAO_HIST_KEY, []);
+
+        function saveAll() {
+            saveData(CARD_STORAGE_KEY, customCards);
+            saveData(GROUP_STORAGE_KEY, groups);
+            saveData(LETTER_STORAGE_KEY, letters);
+            saveData(LIUYAO_HIST_KEY, liuyaoHistory);
+        }
+
+        // ================================================================
+        //  辅助
+        // ================================================================
+        function showToast(msg) {
+            const el = document.getElementById('toast');
+            el.textContent = msg;
+            el.classList.add('show');
+            clearTimeout(el._timeout);
+            el._timeout = setTimeout(() => el.classList.remove('show'), 2500);
+        }
+
+        function openModal(title, bodyHTML, confirmText='确定', cancelText='取消', onConfirm) {
+            const modal = document.getElementById('commonModal');
+            document.getElementById('commonModalTitle').textContent = title;
+            document.getElementById('commonModalBody').innerHTML = bodyHTML;
+            document.getElementById('commonModalFooter').style.display = 'flex';
+            const confirmBtn = document.getElementById('commonModalConfirm');
+            const cancelBtn = document.getElementById('commonModalCancel');
+            confirmBtn.textContent = confirmText;
+            cancelBtn.textContent = cancelText;
+            modal.classList.add('active');
+            const newConfirm = confirmBtn.cloneNode(true);
+            confirmBtn.parentNode.replaceChild(newConfirm, confirmBtn);
+            const newCancel = cancelBtn.cloneNode(true);
+            cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
+            newConfirm.addEventListener('click', () => { if(onConfirm) onConfirm(); modal.classList.remove('active'); });
+            newCancel.addEventListener('click', () => { modal.classList.remove('active'); });
+            modal.onclick = (e) => { if(e.target === modal) modal.classList.remove('active'); };
+        }
+
+        function closeModal() { document.getElementById('commonModal').classList.remove('active'); }
+
+        // ================================================================
+        //  塔罗牌数据与算法 (完整)
+        // ================================================================
+        const TAROT = {
+            major: [
+                { name: '愚者', meaning: '新的开始，冒险，天真，自由', reverse: '鲁莽，轻率，逃避' },
+                { name: '魔术师', meaning: '创造力，技能，自信，专注', reverse: '欺骗，无能，浪费才能' },
+                { name: '女祭司', meaning: '直觉，潜意识，神秘，智慧', reverse: '隐藏的秘密，冷漠，无知' },
+                { name: '皇后', meaning: '丰饶，创造力，自然，孕育', reverse: '依赖，缺乏创造力，停滞' },
+                { name: '皇帝', meaning: '权威，秩序，保护，稳定', reverse: '专制，控制欲，缺乏纪律' },
+                { name: '教皇', meaning: '传统，信仰，教育，指引', reverse: '教条，盲从，误导' },
+                { name: '恋人', meaning: '爱情，选择，和谐，价值观', reverse: '冲突，分离，错误选择' },
+                { name: '战车', meaning: '胜利，意志，行动，克服', reverse: '失控，失败，缺乏方向' },
+                { name: '力量', meaning: '勇气，坚韧，内在力量', reverse: '软弱，恐惧，缺乏自控' },
+                { name: '隐者', meaning: '内省，智慧，独处，引导', reverse: '孤立，保守，逃避' },
+                { name: '命运之轮', meaning: '命运，转变，机缘，循环', reverse: '厄运，僵化，抵抗变化' },
+                { name: '正义', meaning: '公正，真相，平衡，因果', reverse: '不公，欺骗，偏见' },
+                { name: '倒吊人', meaning: '牺牲，换位，觉醒，放手', reverse: '固执，停滞，无谓牺牲' },
+                { name: '死神', meaning: '结束，变革，重生，放下', reverse: '抗拒改变，恐惧，停滞' },
+                { name: '节制', meaning: '调和，平衡，耐心，适应', reverse: '失衡，冲动，缺乏调和' },
+                { name: '恶魔', meaning: '物质欲，束缚，诱惑，执念', reverse: '解脱，觉醒，摆脱束缚' },
+                { name: '高塔', meaning: '突变，觉醒，崩塌，真理', reverse: '灾难，逃避，拒绝改变' },
+                { name: '星星', meaning: '希望，灵感，宁静，疗愈', reverse: '失望，缺乏信心，消极' },
+                { name: '月亮', meaning: '潜意识，幻象，不安，直觉', reverse: '看清真相，释疑，稳定' },
+                { name: '太阳', meaning: '成功，活力，喜悦，光明', reverse: '骄傲，延迟，消极' },
+                { name: '审判', meaning: '觉醒，重生，宽恕，评估', reverse: '逃避，后悔，自我否定' },
+                { name: '世界', meaning: '完成，成就，圆满，旅行', reverse: '未完成，停滞，缺失' }
+            ],
+            minor: {
+                wands: { suit: '权杖', cards: [
+                        { name: '权杖王牌', meaning: '开始，行动，热情，创造' },
+                        { name: '权杖二', meaning: '计划，决策，个人力量' },
+                        { name: '权杖三', meaning: '进展，远见，领导力' },
+                        { name: '权杖四', meaning: '庆典，和谐，稳定' },
+                        { name: '权杖五', meaning: '竞争，冲突，挑战' },
+                        { name: '权杖六', meaning: '胜利，认可，自信' },
+                        { name: '权杖七', meaning: '坚持，防御，勇气' },
+                        { name: '权杖八', meaning: '迅速行动，自由，消息' },
+                        { name: '权杖九', meaning: '韧性，戒备，坚持' },
+                        { name: '权杖十', meaning: '负担，压力，责任' },
+                        { name: '权杖侍从', meaning: '探索，热情，新消息' },
+                        { name: '权杖骑士', meaning: '冒险，行动，冲动' },
+                        { name: '权杖王后', meaning: '自信，热情，领导' },
+                        { name: '权杖国王', meaning: '成熟，远见，掌控' }
+                    ] },
+                cups: { suit: '圣杯', cards: [
+                        { name: '圣杯王牌', meaning: '新感情，爱，创造力' },
+                        { name: '圣杯二', meaning: '联结，平等，吸引力' },
+                        { name: '圣杯三', meaning: '庆祝，友谊，欢乐' },
+                        { name: '圣杯四', meaning: '内省，厌倦，新机会' },
+                        { name: '圣杯五', meaning: '失去，悲伤，接受' },
+                        { name: '圣杯六', meaning: '回忆，纯真，礼物' },
+                        { name: '圣杯七', meaning: '幻象，选择，梦想' },
+                        { name: '圣杯八', meaning: '离开，寻找，勇气' },
+                        { name: '圣杯九', meaning: '满足，梦想成真，享受' },
+                        { name: '圣杯十', meaning: '幸福，家庭，和谐' },
+                        { name: '圣杯侍从', meaning: '新消息，艺术，敏感' },
+                        { name: '圣杯骑士', meaning: '浪漫，理想主义，邀请' },
+                        { name: '圣杯王后', meaning: '直觉，共情，关怀' },
+                        { name: '圣杯国王', meaning: '情感成熟，控制，慈悲' }
+                    ] },
+                swords: { suit: '宝剑', cards: [
+                        { name: '宝剑王牌', meaning: '清晰，真相，决断' },
+                        { name: '宝剑二', meaning: '僵局，拒绝，选择' },
+                        { name: '宝剑三', meaning: '心碎，悲伤，理解' },
+                        { name: '宝剑四', meaning: '休息，恢复，沉思' },
+                        { name: '宝剑五', meaning: '冲突，胜利，损失' },
+                        { name: '宝剑六', meaning: '过渡，疗愈，前行' },
+                        { name: '宝剑七', meaning: '策略，欺骗，隐瞒' },
+                        { name: '宝剑八', meaning: '束缚，限制，自我设限' },
+                        { name: '宝剑九', meaning: '焦虑，噩梦，担忧' },
+                        { name: '宝剑十', meaning: '结束，痛苦，重生' },
+                        { name: '宝剑侍从', meaning: '警觉，好奇，新想法' },
+                        { name: '宝剑骑士', meaning: '冲动，果断，挑战' },
+                        { name: '宝剑王后', meaning: '独立，智慧，客观' },
+                        { name: '宝剑国王', meaning: '理性，权威，决断' }
+                    ] },
+                pentacles: { suit: '星币', cards: [
+                        { name: '星币王牌', meaning: '财富，机遇，富足' },
+                        { name: '星币二', meaning: '平衡，适应，灵活性' },
+                        { name: '星币三', meaning: '合作，计划，技能' },
+                        { name: '星币四', meaning: '控制，稳定，占有' },
+                        { name: '星币五', meaning: '困难，失去，逆境' },
+                        { name: '星币六', meaning: '慷慨，给予，接受' },
+                        { name: '星币七', meaning: '投资，耐心，等待' },
+                        { name: '星币八', meaning: '勤奋，专注，精进' },
+                        { name: '星币九', meaning: '独立，享受，成就' },
+                        { name: '星币十', meaning: '传承，财富，家族' },
+                        { name: '星币侍从', meaning: '学习，机会，新开始' },
+                        { name: '星币骑士', meaning: '勤奋，务实，可靠' },
+                        { name: '星币王后', meaning: '关怀，富足，滋养' },
+                        { name: '星币国王', meaning: '成功，领导，稳定' }
+                    ] }
+            }
+        };
+
+        function buildFullDeck() {
+            const deck = [];
+            TAROT.major.forEach(c => { deck.push({ ...c, type: 'major', suit: '大阿尔卡纳' }); });
+            for (const [key, group] of Object.entries(TAROT.minor)) {
+                group.cards.forEach(c => { deck.push({ ...c, type: 'minor', suit: group.suit }); });
+            }
+            return deck;
+        }
+        const FULL_DECK = buildFullDeck();
+
+        function getReverseMeaning(card) {
+            if (card.reverse) return card.reverse;
+            const m = card.meaning || '';
+            const prefixes = ['过度', '不足', '阻碍', '扭曲', '失衡的'];
+            const p = prefixes[Math.floor(Math.random() * prefixes.length)];
+            return `${p}${m.slice(0, 12)}...`;
+        }
+
+        function drawCard(deck) {
+            const shuffled = [...deck];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return { card: shuffled[0], isUpright: Math.random() < 0.5 };
+        }
+
+        function generateTarotReply(question) {
+            const custom = getCustomReply();
+            if (custom) return { fullText: `🔮 灵讯：${custom}`, cardName: '自定义', orientation: '' };
+            const { card, isUpright } = drawCard(FULL_DECK);
+            const meaning = isUpright ? card.meaning : getReverseMeaning(card);
+            const orientation = isUpright ? '正位' : '逆位';
+            let prefix = '🌟 灵讯指引：';
+            if (question.includes('感情') || question.includes('爱情')) prefix = '💕 感情方面：';
+            else if (question.includes('事业') || question.includes('工作')) prefix = '💼 事业方面：';
+            else if (question.includes('健康')) prefix = '🌿 健康方面：';
+            else if (question.includes('财运')) prefix = '💰 财运方面：';
+            let fullText = `${prefix}\n「${card.name}」${orientation}\n💬 ${meaning}`;
+            const extra = ['✨ 信任你的直觉，宇宙自有安排。', '🌙 此刻的静默，是下一个回响的前奏。', '🌞 光与影交织，方见真相。',
+                '🌸 一切发生，皆为助缘。', '🌀 允许变化流动，不执不拒。', '🌟 你比想象中更强大。'
+            ];
+            fullText += `\n\n${extra[Math.floor(Math.random() * extra.length)]}`;
+            return { fullText, cardName: card.name, orientation };
+        }
+
+        function getCustomReply() {
+            if (customCards.length === 0) return null;
+            const idx = Math.floor(Math.random() * customCards.length);
+            return customCards[idx].content;
+        }
+
+        // ================================================================
+        //  聊天核心逻辑 (保留)
+        // ================================================================
+        const state = {
+            messages: [],
+            idCounter: 0,
+            otherName: '塔罗灵犀',
+            myName: '寻光者',
+            otherAvatar: '',
+            myAvatar: '',
+            otherStatus: '✨ 静候',
+            myStatus: '🌱 探索',
+            replyTarget: null,
+        };
+
+        const $ = id => document.getElementById(id);
+        const chatArea = $('chatArea');
+        const msgInput = $('msgInput');
+        const sendBtn = $('sendBtn');
+        const otherAvatar = $('otherAvatar');
+        const myAvatar = $('myAvatar');
+        const otherName = $('otherName');
+        const myName = $('myName');
+        const otherStatus = $('otherStatus');
+        const myStatus = $('myStatus');
+
+        function renderMessages() {
+            chatArea.innerHTML = '';
+            state.messages.forEach(msg => {
+                const el = createMessageElement(msg);
+                chatArea.appendChild(el);
+            });
+            scrollToBottom();
+        }
+
+        function createMessageElement(msg) {
+            const div = document.createElement('div');
+            div.className = `msg ${msg.sender === 'me' ? 'self' : 'other'}`;
+            div.dataset.id = msg.id;
+            if (msg.quote) {
+                const quoteDiv = document.createElement('div');
+                quoteDiv.className = 'msg-quote';
+                quoteDiv.textContent = `「${msg.quote}」`;
+                div.appendChild(quoteDiv);
+            }
+            const bubble = document.createElement('div');
+            bubble.className = 'msg-bubble';
+            bubble.textContent = msg.text;
+            div.appendChild(bubble);
+            if (msg.tarot) {
+                const badge = document.createElement('div');
+                badge.className = 'tarot-badge';
+                badge.textContent = `🔮 ${msg.tarot.cardName} · ${msg.tarot.orientation}`;
+                badge.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showTarotDetail(msg.tarot);
+                });
+                bubble.appendChild(badge);
+            }
+            const time = document.createElement('div');
+            time.className = 'msg-time';
+            time.textContent = msg.time || new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+            div.appendChild(time);
+            const actions = document.createElement('div');
+            actions.className = 'msg-actions';
+            actions.innerHTML = `
+                <button class="quote-btn">📎 引用</button>
+                <button class="star-btn ${msg.starred ? 'starred' : ''}">${msg.starred ? '⭐' : '☆'}</button>
+                <button class="danger delete-btn">🗑️</button>
+            `;
+            div.appendChild(actions);
+            actions.querySelector('.quote-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                setReplyTarget(msg);
+            });
+            actions.querySelector('.star-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                msg.starred = !msg.starred;
+                renderMessages();
+            });
+            actions.querySelector('.delete-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (confirm('确定删除这条消息吗？')) {
+                    state.messages = state.messages.filter(m => m.id !== msg.id);
+                    renderMessages();
+                }
+            });
+            div.addEventListener('click', () => {
+                actions.classList.toggle('show');
+            });
+            return div;
+        }
+
+        function scrollToBottom() {
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        function sendMessage(text, sender = 'me', quote = null, tarotData = null) {
+            if (!text || text.trim() === '') return;
+            const msg = {
+                id: ++state.idCounter,
+                sender: sender,
+                text: text.trim(),
+                time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+                quote: quote || null,
+                starred: false,
+                tarot: tarotData || null,
+            };
+            state.messages.push(msg);
+            renderMessages();
+            state.replyTarget = null;
+            return msg;
+        }
+
+        function setReplyTarget(msg) {
+            state.replyTarget = msg;
+            msgInput.placeholder = `回复: ${msg.text.slice(0, 20)}...`;
+            msgInput.focus();
+        }
+
+        function sendTarotReply(question = '') {
+            const reading = generateTarotReply(question);
+            sendMessage(reading.fullText, 'other', null, reading);
+            state.otherStatus = `🔮 ${reading.cardName}`;
+            otherStatus.textContent = state.otherStatus;
+            return reading;
+        }
+
+        function sendDailyMessage() {
+            const readings = [];
+            for (let i = 0; i < 3; i++) {
+                const { card, isUpright } = drawCard(FULL_DECK);
+                const r = generateTarotReply('今日运势');
+                readings.push(r);
+            }
+            const selected = readings[1] || readings[0];
+            const msg = `📜 今日灵讯 · ${selected.cardName} ${selected.orientation}\n${selected.fullText.split('\n')[1] || selected.fullText}`;
+            sendMessage(msg, 'other', null, selected);
+            state.otherStatus = `📜 ${selected.cardName}`;
+            otherStatus.textContent = state.otherStatus;
+            $('dailyStatusBtn').textContent = `📜 ${selected.cardName}`;
+            return selected;
+        }
+
+        // ================================================================
+        //  设置面板功能 (自定义回复、主题、信件、小六卦)
+        // ================================================================
+
+        // ---- 自定义回复 ----
+        function renderCardList() {
+            const container = $('cardListContainer');
+            if (!container) return;
+            if (customCards.length === 0) {
+                container.innerHTML = '<div class="text-muted text-center" style="padding:20px;">暂无字卡，点击“添加”创建。</div>';
+                return;
+            }
+            const groupsMap = {};
+            customCards.forEach(c => {
+                const g = c.group || '未分组';
+                if (!groupsMap[g]) groupsMap[g] = [];
+                groupsMap[g].push(c);
+            });
+            let html = '';
+            for (const [groupName, cards] of Object.entries(groupsMap)) {
+                html += `<div style="margin:8px 0 4px;font-weight:600;color:#555;">📁 ${groupName}</div>`;
+                cards.forEach(c => {
+                    html += `
+                        <div class="card-list-item" data-id="${c.id}">
+                            <input type="checkbox" class="card-checkbox" data-id="${c.id}">
+                            <span class="content">${c.content}</span>
+                            <span class="group-tag">${c.group || '未分组'}</span>
+                            <button class="del-btn" data-id="${c.id}">✕</button>
+                        </div>
+                    `;
+                });
+            }
+            container.innerHTML = html;
+            container.querySelectorAll('.del-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = parseInt(btn.dataset.id);
+                    if (confirm('删除该字卡？')) {
+                        customCards = customCards.filter(c => c.id !== id);
+                        saveAll();
+                        renderCardList();
+                        showToast('已删除');
+                    }
+                });
+            });
+        }
+
+        function showAddCardModal() {
+            openModal('添加字卡 (一行一条)', `
+                <div class="field">
+                    <label>内容 (每行一条，自动拆分)</label>
+                    <textarea id="addCardTextarea" placeholder="输入多行字卡内容..."></textarea>
+                </div>
+                <div class="field">
+                    <label>分组 (可选)</label>
+                    <input type="text" id="addCardGroup" placeholder="分组名称">
+                </div>
+            `, '添加', '取消', () => {
+                const textarea = document.getElementById('addCardTextarea');
+                const group = document.getElementById('addCardGroup').value.trim() || '未分组';
+                const lines = textarea.value.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+                if (lines.length === 0) { showToast('请输入至少一条内容'); return; }
+                lines.forEach(content => {
+                    customCards.push({ id: Date.now() + Math.random() * 1000, content, group });
+                });
+                saveAll();
+                renderCardList();
+                showToast(`成功添加 ${lines.length} 条字卡`);
+            });
+        }
+
+        function batchDelete() {
+            const checks = document.querySelectorAll('.card-checkbox:checked');
+            if (checks.length === 0) { showToast('请先勾选要删除的字卡'); return; }
+            if (!confirm(`确定删除选中的 ${checks.length} 条字卡吗？`)) return;
+            const ids = Array.from(checks).map(cb => parseInt(cb.dataset.id));
+            customCards = customCards.filter(c => !ids.includes(c.id));
+            saveAll();
+            renderCardList();
+            showToast(`已删除 ${ids.length} 条`);
+        }
+
+        function showGroupManage() {
+            let html = `<div class="field"><label>现有分组</label><div style="max-height:200px;overflow-y:auto;">`;
+            const groupSet = new Set(customCards.map(c => c.group || '未分组'));
+            if (groupSet.size === 0) html += '<div class="text-muted">暂无分组</div>';
+            else {
+                groupSet.forEach(g => {
+                    html += `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f0f0f0;">
+                        <span>${g}</span>
+                        <button class="del-btn" data-group="${g}" style="color:#e74c3c;background:none;border:none;cursor:pointer;">✕</button>
+                    </div>`;
+                });
+            }
+            html += `</div></div>
+                <div class="field"><label>新建分组</label><input type="text" id="newGroupName" placeholder="输入新分组名称"></div>
+                <div class="field"><label>将选中的字卡移到分组</label>
+                    <select id="moveGroupSelect"><option value="">-- 不移动 --</option>`;
+            groupSet.forEach(g => {
+                html += `<option value="${g}">${g}</option>`;
+            });
+            html += `</select></div>`;
+            openModal('分组管理', html, '应用', '关闭', () => {
+                const newGroup = document.getElementById('newGroupName').value.trim();
+                if (newGroup) showToast(`分组 "${newGroup}" 已创建，可在添加时使用`);
+                const moveTo = document.getElementById('moveGroupSelect').value;
+                if (moveTo) showToast('请在列表内手动修改分组');
+            });
+            setTimeout(() => {
+                document.querySelectorAll('#commonModalBody .del-btn[data-group]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const g = btn.dataset.group;
+                        if (confirm(`删除分组 "${g}" 及其所有字卡？`)) {
+                            customCards = customCards.filter(c => c.group !== g);
+                            saveAll();
+                            renderCardList();
+                            showToast(`已删除分组 "${g}"`);
+                            closeModal();
+                        }
+                    });
+                });
+            }, 100);
+        }
+
+        // ---- 主题风格 ----
+        function getTheme() {
+            return loadData(THEME_STORAGE_KEY, {});
+        }
+        function setTheme(themeObj) {
+            const current = getTheme();
+            Object.assign(current, themeObj);
+            saveData(THEME_STORAGE_KEY, current);
+            showToast('主题已保存，刷新聊天界面生效');
+            updateThemePreview();
+            applyTheme();
+        }
+
+        function applyTheme() {
+            const theme = getTheme();
+            const app = document.getElementById('app');
+            app.classList.remove('theme-retro', 'theme-night');
+            if (theme.retro) app.classList.add('theme-retro');
+            if (theme.night) app.classList.add('theme-night');
+            if (theme.bgImage) {
+                document.getElementById('chatArea').style.backgroundImage = `url(${theme.bgImage})`;
+                document.getElementById('chatArea').style.backgroundSize = 'cover';
+            } else {
+                document.getElementById('chatArea').style.backgroundImage = '';
+            }
+        }
+
+        function updateThemePreview() {
+            const theme = getTheme();
+            const container = document.getElementById('themePreviewContainer');
+            if (!container) return;
+            let html = '';
+            if (theme.retro) {
+                html += `<div style="background:#fff;border:2px solid #d4d0c8;padding:6px 10px;font-family:'宋体',monospace;font-size:12px;margin:4px 0;border-top-color:#fff;border-left-color:#fff;border-right-color:#808080;border-bottom-color:#808080;">对方消息 (复古)</div>`;
+                html += `<div style="background:#fff;border:2px solid #d4d0c8;padding:6px 10px;font-family:'宋体',monospace;font-size:12px;margin:4px 0;border-top-color:#fff;border-left-color:#fff;border-right-color:#808080;border-bottom-color:#808080;text-align:right;">我方消息 (复古)</div>`;
+            } else {
+                html += `<div class="preview-msg" style="background:#fff;padding:6px 12px;border-radius:6px;margin:4px 0;display:inline-block;">对方消息</div>`;
+                html += `<div class="preview-msg" style="background:#95ec69;padding:6px 12px;border-radius:6px;margin:4px 0;display:inline-block;float:right;">我方消息</div>`;
+            }
+            if (theme.night) {
+                html = `<div style="background:#1a1a1a;padding:8px;border-radius:4px;">${html}</div>`;
+            }
+            container.innerHTML = html;
+        }
+
+        // ---- 信件往来 ----
+        function renderLetters() {
+            const container = $('letterContainer');
+            if (!container) return;
+            if (letters.length === 0) {
+                container.innerHTML = '<div class="text-muted text-center" style="padding:20px;">暂无信件</div>';
+                return;
+            }
+            let html = '';
+            letters.slice().reverse().forEach(l => {
+                const statusClass = l.status === 'done' ? 'done' : 'waiting';
+                const statusText = l.status === 'done' ? '已回复' : '等待中...';
+                html += `
+                    <div class="letter-item">
+                        <div class="letter-meta">
+                            <span>${l.direction === 'in' ? '📩 来信' : '✉️ 回信'}</span>
+                            <span>${l.time || '未知时间'}</span>
+                            <span class="status-badge ${statusClass}">${statusText}</span>
+                        </div>
+                        <div class="letter-content">${l.content}</div>
+                        ${l.result ? `<div class="letter-result">🔮 ${l.result}</div>` : ''}
+                        ${l.status === 'waiting' ? `<button class="btn-primary" style="margin-top:6px;padding:4px 12px;font-size:12px;" data-id="${l.id}" onclick="replyLetter(${l.id})">✉️ 回信</button>` : ''}
+                        <button class="btn-danger" style="margin-top:6px;padding:4px 12px;font-size:12px;margin-left:6px;" data-id="${l.id}" onclick="deleteLetter(${l.id})">🗑️</button>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        window.replyLetter = function(id) {
+            const letter = letters.find(l => l.id === id);
+            if (!letter) return;
+            openModal('回写信', `
+                <div class="field"><label>原信内容</label><div style="background:#f5f5f5;padding:8px;border-radius:4px;">${letter.content}</div></div>
+                <div class="field"><label>您的回复</label><textarea id="replyContent" style="min-height:80px;"></textarea></div>
+            `, '发送', '取消', () => {
+                const reply = document.getElementById('replyContent').value.trim();
+                if (!reply) { showToast('请输入回复内容'); return; }
+                const result = generateTarotReply(reply);
+                letter.status = 'done';
+                letter.result = result.fullText;
+                letter.reply = reply;
+                letter.time = new Date().toLocaleString();
+                saveAll();
+                renderLetters();
+                showToast('回信已发送，结果已生成');
+            });
+        };
+
+        window.deleteLetter = function(id) {
+            if (confirm('删除此信件？')) {
+                letters = letters.filter(l => l.id !== id);
+                saveAll();
+                renderLetters();
+                showToast('已删除');
+            }
+        };
+
+        function composeLetter() {
+            openModal('写信', `
+                <div class="field"><label>内容</label><textarea id="letterContent" style="min-height:80px;"></textarea></div>
+            `, '发送', '取消', () => {
+                const content = document.getElementById('letterContent').value.trim();
+                if (!content) { showToast('请输入内容'); return; }
+                const newLetter = {
+                    id: Date.now() + Math.random(),
+                    direction: 'in',
+                    content: content,
+                    status: 'waiting',
+                    result: null,
+                    time: new Date().toLocaleString()
+                };
+                letters.push(newLetter);
+                saveAll();
+                renderLetters();
+                showToast('信件已发送，等待回复...');
+                setTimeout(() => {
+                    const reading = generateTarotReply(content);
+                    newLetter.status = 'done';
+                    newLetter.result = reading.fullText;
+                    newLetter.time = new Date().toLocaleString();
+                    saveAll();
+                    renderLetters();
+                    showToast('📩 收到回信！');
+                }, 3000);
+            });
+        }
+
+        // ---- 小六卦起 ----
+        function liuyaoCalc(input, question) {
+            const num = parseInt(input);
+            if (!isNaN(num)) {
+                const idx = ((num - 1) % 6 + 6) % 6;
+                const results = ['大安', '留连', '速喜', '赤口', '小吉', '空亡'];
+                const meanings = {
+                    '大安':'身不动时，五行属木，颜色青色，方位东方。临青龙，凡谋事主一、五、七。有静止、心安、吉祥之含义。',
+                    '留连':'卒未归时，五行属水，颜色黑色，方位北方。临玄武，凡谋事主二、八、十。有暗昧不明、延迟、纠缠、拖延之含义。',
+                    '速喜':'人即至时，五行属火，颜色红色，方位南方。临朱雀，凡谋事主三、六、九。有快速、喜庆、吉利之含义。指时机已到。',
+                    '赤口':'官事凶时，五行属金，颜色白色，方位西方。临白虎，凡谋事主四、七、十。有不吉、惊恐、凶险、口舌是非之含义。',
+                    '小吉':'人来喜时，五行属水，临六合，凡谋事主一、五、七。有和合、吉利之含义。',
+                    '空亡':'音信稀时，五行属土，颜色黄色，方位中央。临勾陈，凡谋事主三、六、九。有不吉、无结果、忧虑之含义。'
+                };
+                return `🔮 小六壬掌诀：${results[idx]}\n${meanings[results[idx]] || ''}`;
+            } else if (input.length === 1) {
+                const char = input;
+                const dict = {
+                    '一':'一心一意，专注当下。','二':'二元对立，选择与平衡。','三':'三生万物，生生不息。',
+                    '四':'四方安稳，脚踏实地。','五':'五行调和，中庸之道。','六':'六合顺遂，人际和谐。',
+                    '七':'七情六欲，修心为上。','八':'八方来财，机遇增多。','九':'九九归一，圆满结局。',
+                    '十':'十全十美，完美收官。','水':'水性流动，柔韧包容。','火':'火性热烈，光明上进。',
+                    '木':'木性生发，成长壮大。','金':'金性刚毅，果断决绝。','土':'土性厚重，承载万物。',
+                    '天':'天道酬勤，自强不息。','地':'地道坤顺，厚德载物。','人':'人和为贵，众志成城。',
+                    '心':'心之所向，素履以往。','爱':'爱出者爱返，福往者福来。'
+                };
+                if (dict[char]) return `📜 字解：「${char}」\n${dict[char]}`;
+                else {
+                    const strokes = ['横','竖','撇','捺','折'];
+                    const pick = strokes[Math.floor(Math.random() * strokes.length)];
+                    return `📜 字解：「${char}」\n此字笔画含「${pick}」，寓意${pick}者，通达也。`;
+                }
+            } else {
+                return '请输入数字或单个汉字。';
+            }
+        }
+
+        function getLiuyaoResult() {
+            const question = document.getElementById('liuyaoQuestion').value.trim();
+            const input = document.getElementById('liuyaoInput').value.trim();
+            if (!input) { showToast('请输入数字或汉字'); return; }
+            const result = liuyaoCalc(input, question);
+            const display = document.getElementById('liuyaoResultDisplay');
+            display.style.display = 'block';
+            display.innerHTML = `<strong>结果：</strong><pre style="white-space:pre-wrap;margin-top:6px;">${result}</pre>`;
+            liuyaoHistory.push({
+                id: Date.now() + Math.random(),
+                question: question || '无',
+                input: input,
+                result: result,
+                time: new Date().toLocaleString()
+            });
+            saveAll();
+            renderLiuyaoHistory();
+        }
+
+        function renderLiuyaoHistory() {
+            const container = document.getElementById('liuyaoHistory');
+            if (!container) return;
+            if (liuyaoHistory.length === 0) {
+                container.innerHTML = '<div class="text-muted text-center" style="padding:10px;">暂无历史记录</div>';
+                return;
+            }
+            let html = '';
+            liuyaoHistory.slice().reverse().forEach(h => {
+                html += `
+                    <div class="history-item" data-id="${h.id}">
+                        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${h.question || h.input} → ${h.result.slice(0,20)}...</span>
+                        <button class="del-hist" data-id="${h.id}">✕</button>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+            container.querySelectorAll('.history-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('del-hist')) return;
+                    const id = parseInt(item.dataset.id);
+                    const record = liuyaoHistory.find(h => h.id === id);
+                    if (record) {
+                        openModal('历史详情', `
+                            <div><strong>问题：</strong>${record.question}</div>
+                            <div><strong>输入：</strong>${record.input}</div>
+                            <div><strong>结果：</strong><pre style="white-space:pre-wrap;">${record.result}</pre></div>
+                            <div class="text-muted" style="margin-top:8px;">${record.time}</div>
+                        `, '关闭', '', () => {});
+                    }
+                });
+            });
+            container.querySelectorAll('.del-hist').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const id = parseInt(btn.dataset.id);
+                    if (confirm('删除此记录？')) {
+                        liuyaoHistory = liuyaoHistory.filter(h => h.id !== id);
+                        saveAll();
+                        renderLiuyaoHistory();
+                        showToast('已删除');
+                    }
+                });
+            });
+        }
+
+        // ================================================================
+        //  事件绑定 & 初始化
+        // ================================================================
+        document.addEventListener('DOMContentLoaded', function() {
+            // ---- 聊天事件 ----
+            sendBtn.addEventListener('click', () => {
+                const text = msgInput.value.trim();
+                if (!text) return;
+                const quote = state.replyTarget ? state.replyTarget.text : null;
+                sendMessage(text, 'me', quote);
+                msgInput.value = '';
+                msgInput.placeholder = '输入讯息...';
+                state.replyTarget = null;
+                sendBtn.disabled = true;
+                setTimeout(() => {
+                    const reading = sendTarotReply(text);
+                    sendBtn.disabled = false;
+                    if (reading) {
+                        state.otherStatus = `🔮 ${reading.cardName}`;
+                        otherStatus.textContent = state.otherStatus;
+                    }
+                }, 400 + Math.random() * 600);
+            });
+
+            msgInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendBtn.click();
+                }
+            });
+
+            // 每日状态
+            document.getElementById('dailyStatusBtn').addEventListener('click', () => {
+                sendDailyMessage();
+                setTimeout(() => {
+                    const lastMsg = state.messages[state.messages.length - 1];
+                    if (lastMsg && lastMsg.sender === 'other' && lastMsg.tarot) {
+                        document.getElementById('dailyStatusBtn').textContent = `📜 ${lastMsg.tarot.cardName}`;
+                    }
+                }, 100);
+            });
+
+            // 日历
+            document.getElementById('calendarBtn').addEventListener('click', () => {
+                const now = new Date();
+                const dateStr = now.toLocaleDateString('zh-CN', { year:'numeric', month:'long', day:'numeric', weekday:'long' });
+                alert(`📅 ${dateStr}\n今日塔罗指引：${document.getElementById('dailyStatusBtn').textContent}`);
+            });
+
+            // 头像昵称修改 (保留)
+            document.querySelectorAll('[data-target]').forEach(el => {
+                el.addEventListener('click', () => {
+                    const target = el.dataset.target;
+                    openProfileModal(target);
+                });
+            });
+
+            function openProfileModal(target) {
+                const isOther = target === 'other';
+                const name = isOther ? state.otherName : state.myName;
+                const avatar = isOther ? state.otherAvatar : state.myAvatar;
+                document.getElementById('modalTitle').textContent = isOther ? '修改对方资料' : '修改我的资料';
+                document.getElementById('modalNameInput').value = name;
+                document.getElementById('modalAvatarPreview').src = avatar || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ddd"/%3E%3C/svg%3E';
+                document.getElementById('modalAvatarPreview').dataset.target = target;
+                document.getElementById('avatarFileInput').value = '';
+                document.getElementById('profileModal').classList.add('active');
+                document.getElementById('profileModal').dataset.target = target;
+            }
+
+            document.getElementById('modalCancel').addEventListener('click', () => {
+                document.getElementById('profileModal').classList.remove('active');
+            });
+
+            document.getElementById('modalConfirm').addEventListener('click', () => {
+                const target = document.getElementById('profileModal').dataset.target;
+                const isOther = target === 'other';
+                const newName = document.getElementById('modalNameInput').value.trim() || (isOther ? '塔罗灵犀' : '寻光者');
+                const file = document.getElementById('avatarFileInput').files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const dataUrl = e.target.result;
+                        updateProfile(target, newName, dataUrl);
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    const currentAvatar = isOther ? state.otherAvatar : state.myAvatar;
+                    updateProfile(target, newName, currentAvatar);
+                }
+                document.getElementById('profileModal').classList.remove('active');
+            });
+
+            function updateProfile(target, name, avatar) {
+                const isOther = target === 'other';
+                if (isOther) {
+                    state.otherName = name;
+                    if (avatar) state.otherAvatar = avatar;
+                    otherName.textContent = name;
+                    if (avatar) otherAvatar.src = avatar;
+                } else {
+                    state.myName = name;
+                    if (avatar) state.myAvatar = avatar;
+                    myName.textContent = name;
+                    if (avatar) myAvatar.src = avatar;
+                }
+                renderMessages();
+            }
+
+            document.getElementById('profileModal').addEventListener('click', (e) => {
+                if (e.target === document.getElementById('profileModal')) {
+                    document.getElementById('profileModal').classList.remove('active');
+                }
+            });
+
+            // ---- 设置面板 ----
+            document.getElementById('settingsBtn').addEventListener('click', () => {
+                document.getElementById('settingsPanel').classList.add('active');
+                // 刷新子面板数据
+                renderCardList();
+                renderLetters();
+                renderLiuyaoHistory();
+                applyTheme();
+                updateThemePreview();
+            });
+
+            document.getElementById('settingsBack').addEventListener('click', () => {
+                document.getElementById('settingsPanel').classList.remove('active');
+            });
+
+            // 选项卡切换
+            const tabs = document.querySelectorAll('.settings-tabs button');
+            const panels = {
+                tabCustom: document.getElementById('tabCustom'),
+                tabTheme: document.getElementById('tabTheme'),
+                tabLetter: document.getElementById('tabLetter'),
+                tabLiuyao: document.getElementById('tabLiuyao')
+            };
+            tabs.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    tabs.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    Object.keys(panels).forEach(key => {
+                        panels[key].classList.toggle('active', key === this.dataset.tab);
+                    });
+                });
+            });
+
+            // 自定义回复
+            document.getElementById('addCardBtn').addEventListener('click', showAddCardModal);
+            document.getElementById('batchDeleteBtn').addEventListener('click', batchDelete);
+            document.getElementById('groupManageBtn').addEventListener('click', showGroupManage);
+
+            // 主题
+            document.getElementById('themeBgBtn').addEventListener('click', () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                            setTheme({ bgImage: ev.target.result });
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                };
+                input.click();
+            });
+            document.getElementById('themeBubbleBtn').addEventListener('click', () => {
+                const current = getTheme();
+                setTheme({ retro: !current.retro });
+            });
+            document.getElementById('themeNightBtn').addEventListener('click', () => {
+                const current = getTheme();
+                setTheme({ night: !current.night });
+            });
+            document.getElementById('themeHappyBtn').addEventListener('click', () => {
+                saveData(THEME_STORAGE_KEY, {});
+                showToast('已重置默认主题');
+                updateThemePreview();
+                applyTheme();
+            });
+
+            // 信件
+            document.getElementById('letterInboxBtn').addEventListener('click', renderLetters);
+            document.getElementById('letterComposeBtn').addEventListener('click', composeLetter);
+
+            // 小六卦
+            document.getElementById('liuyaoGetBtn').addEventListener('click', getLiuyaoResult);
+            document.getElementById('clearLiuyaoHist').addEventListener('click', () => {
+                if (confirm('清空所有历史记录？')) {
+                    liuyaoHistory = [];
+                    saveAll();
+                    renderLiuyaoHistory();
+                    showToast('已清空');
+                }
+            });
+            document.getElementById('liuyaoInput').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') getLiuyaoResult();
+            });
+
+            // 底部按钮占位
+            document.querySelectorAll('#bottomBar .icon-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const label = btn.textContent.trim();
+                    if (label === '📞') alert('📞 语音传讯 (模拟)');
+                    else if (label === '🖼️') {
+                        document.getElementById('avatarFileInput').click();
+                        document.getElementById('avatarFileInput').onchange = (e) => {
+                            const file = e.target.files[0];
+                            if (file) {
+                                const reader = new FileReader();
+                                reader.onload = (ev) => {
+                                    const dataUrl = ev.target.result;
+                                    updateProfile('me', state.myName, dataUrl);
+                                };
+                                reader.readAsDataURL(file);
+                            }
+                        };
+                    } else if (label === '😊') {
+                        const emojis = ['✨','🌟','💫','🌸','🌙','🌞','🌿','🌀','💕','🔮','🕊️','🌺'];
+                        msgInput.value += emojis[Math.floor(Math.random() * emojis.length)];
+                        msgInput.focus();
+                    }
+                });
+            });
+
+            // ---- 塔罗详情弹窗 ----
+            window.showTarotDetail = function(tarotData) {
+                const { cardName, orientation, fullText } = tarotData;
+                const content = document.getElementById('tarotContent');
+                content.innerHTML = `
+                    <div class="card-name">${cardName}</div>
+                    <div class="card-orientation ${orientation === '正位' ? 'upright' : 'reversed'}">${orientation}</div>
+                    <div class="card-meaning">${fullText || '暂无详细解读'}</div>
+                `;
+                document.getElementById('tarotModal').classList.add('active');
+            };
+            document.getElementById('tarotModalClose').addEventListener('click', () => {
+                document.getElementById('tarotModal').classList.remove('active');
+            });
+            document.getElementById('tarotModal').addEventListener('click', (e) => {
+                if (e.target === document.getElementById('tarotModal')) {
+                    document.getElementById('tarotModal').classList.remove('active');
+                }
+            });
+
+            // ---- 初始化聊天 ----
+            // 设置默认头像
+            if (!state.otherAvatar) {
+                otherAvatar.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%2399c2e0"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="white" font-family="sans-serif"%3E🧙%3C/text%3E%3C/svg%3E';
+            }
+            if (!state.myAvatar) {
+                myAvatar.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23f5b7b1"/%3E%3Ctext x="50" y="55" font-size="40" text-anchor="middle" fill="white" font-family="sans-serif"%3E🌟%3C/text%3E%3C/svg%3E';
+            }
+            otherName.textContent = state.otherName;
+            myName.textContent = state.myName;
+            otherStatus.textContent = state.otherStatus;
+            myStatus.textContent = state.myStatus;
+
+            // 欢迎消息
+            setTimeout(() => {
+                sendMessage('🔮 欢迎来到字卡传讯 · 塔罗灵犀\n\n我是塔罗灵犀，请向我倾诉你的心事、疑问或当下的感受。我会为你抽一张牌，传递宇宙的讯息。', 'other');
+                setTimeout(() => {
+                    sendDailyMessage();
+                }, 600);
+            }, 300);
+            renderMessages();
+
+            // 应用主题
+            applyTheme();
+        });
+    </script>
+</body>
+  </html>
